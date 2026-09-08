@@ -1,6 +1,5 @@
 # The Beauty of Systems
 
-
 ## Description
 
 A fingerprint looks like the growth rings of a tree; the seed spiral of a sunflower looks like the arm of a galaxy; skin looks like cracked ground. This project does not treat those resemblances as coincidence — it asks what kind of process produces them, and answers with three living systems you can operate.
