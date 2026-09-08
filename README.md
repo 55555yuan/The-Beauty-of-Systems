@@ -1,9 +1,5 @@
 # The Beauty of Systems
 
-**Three interactive generative systems in which leaf venation, brain folds and honeycomb turn out to be three answers to one question: what shape does a constraint make?**
-
-
----
 
 ## Description
 
@@ -114,5 +110,5 @@ Every `sketch.js` is assembled from four parts, marked with `§` section headers
 Code and images © 2026 Yuan Zheng. The photographs used in the exhibition poster are separately licensed and are not part of this repository.
 
 ## Contact
-
+- GitHub repo: https://github.com/55555yuan/The-Beauty-of-Systems.git
 - Vedio demo: https://vimeo.com/1224950982?share=copy&fl=sv&fe=ci
