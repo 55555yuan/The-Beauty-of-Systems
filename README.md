@@ -2,10 +2,6 @@
 
 **Three interactive generative systems in which leaf venation, brain folds and honeycomb turn out to be three answers to one question: what shape does a constraint make?**
 
-By Yuan Zheng 
-
-![Before and after the rendering rewrite](figures/rendering_before_after.png)
-*The same module and the same preset, rendered by two versions of the pipeline: three strokes per line (left) and one additive pass into a half-resolution ink sheet (right).*
 
 ---
 
@@ -88,6 +84,9 @@ Every `sketch.js` is assembled from four parts, marked with `§` section headers
 - Rendering is CPU-rasterised and scales with pixel count, so a large display costs more than a small one. The piece adapts its own quality to the frame rate; press `F` for the richer step on a fast machine, or add `?lite` on a slow one.
 
 ## Screenshots
+<img width="1792" height="1120" alt="Screenshot 2026-08-28 at 23 04 08" src="https://github.com/user-attachments/assets/7d1de99b-61db-4458-95af-1a6d646748d5" />
+<img width="1792" height="1120" alt="Screenshot 2026-08-28 at 23 03 19" src="https://github.com/user-attachments/assets/46e575d1-c21b-4302-b209-3883c32a7caf" />
+<img width="1792" height="1120" alt="Screenshot 2026-08-28 at 23 02 02" src="https://github.com/user-attachments/assets/13746f29-4aa0-4370-97a3-e203cc8a22ea" />
 
 
 ## Credits
