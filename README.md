@@ -106,7 +106,7 @@ Every `sketch.js` is assembled from four parts, marked with `§` section headers
 - Haeckel, E. (1904) *Kunstformen der Natur*.
 - Jenson, S. (2021) [*36 Points*](https://www.sagejenson.com/36points/) — the standard this project set itself: a simulation becomes a work at the moment a hand is laid on it while it is still alive.
 
-Code and images © 2026 Yuan Zheng. The photographs used in the exhibition poster are separately licensed and are not part of this repository.
+Code and images © 2026 Yuan Zheng. The photographs used in the exhibition poster are free licensed and are not part of this repository.
 
 ## Contact
 - GitHub repo: https://github.com/55555yuan/The-Beauty-of-Systems.git
