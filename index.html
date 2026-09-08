@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>系统之美 · The Beauty of Systems</title>
+<!--
+  外壳 / THE SHELL
+
+  为什么是三个独立文档而不是一份合并的代码：
+  三个板块的顶层名冲突有八十多个 —— AXES、PRESETS、P、applyAxes、grow、render、
+  startFood、upkeep、deathFloor…… 每一个都在三份里各有一份不同的定义。
+  合并要么把三份全部改写成闭包（三次大手术，风险都落在已经跑通的代码上），
+  要么就让它们各自待在自己的文档里。选后者还有一个实际好处：
+  **每个板块仍然是一个可以单独打开、单独继续改的文件**，而这个项目还在迭代。
+
+  外壳只做三件事：装载、切换、把共用的参数带过去。
+
+  Why three separate documents rather than one merged file: the three modules collide on
+  more than eighty top-level names — AXES, PRESETS, P, applyAxes, grow, render, startFood,
+  upkeep, deathFloor and so on, each defined differently in all three. Merging would mean
+  either rewriting all three into closures — three large operations, every one of them on
+  code that already works — or letting each keep its own document. The latter also keeps a
+  practical advantage: each module stays a file that can be opened and worked on by itself,
+  and this project is still being iterated.
+
+  The shell does three things: load, switch, and carry the shared parameters across.
+-->
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:fixed;inset:0}
+  iframe{position:absolute;inset:0;width:100%;height:100%;border:0;
+         opacity:0;transition:opacity .55s ease;pointer-events:none}
+  iframe.on{opacity:1;pointer-events:auto}
+  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+        color:#f4f4f4;background:#000;z-index:20;transition:opacity .6s;
+        font:400 13px/1.8 ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+        letter-spacing:.22em;text-align:center}
+  #boot.gone{opacity:0;pointer-events:none}
+  #boot em{display:block;font-style:normal;font-size:10px;opacity:.4;
+           letter-spacing:.1em;margin-top:8px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <iframe id="fI"   title="Space colonization"></iframe>
+  <iframe id="fII"  title="Differential growth"></iframe>
+  <iframe id="fIII" title="Voronoi tessellation"></iframe>
+</div>
+<div id="boot">THE BEAUTY OF SYSTEMS<em>系统之美</em></div>
+
+<script>
+/* 共用轴的清单和归一化换算都在板块那边（每份 sketch.js 末尾的对接层），
+   外壳只负责把一包已经归一好的数从一个板块递给另一个，不认识任何具体的轴名。
+   这样加一根共用轴只要改板块，不必碰外壳。
+   The list of shared axes and the normalisation both live on the module side, in the link
+   block at the end of each sketch.js. The shell only carries an already-normalised bundle
+   from one module to the next and knows no axis names at all, so adding a shared axis
+   means touching the modules and never the shell. */
+
+/* 地址栏的参数要透传进去 —— 展陈模式（?exhibit）是写在板块那边的，
+   外壳不接上的话，插进播放机的就还是带面板的版本。
+   The query string is passed through: exhibit mode lives on the module side, and without
+   this the machine at the show would still come up with the panel. */
+const QS = location.search || '';
+
+/* 板块的编号（I / II / III）和磁盘上的文件夹名（1 / 2 / 3）是两回事：
+   板块用罗马数字自报家门（MODULE_ID），文件夹用阿拉伯数字。这张表就是两者的对照，
+   外壳只在拼地址的时候用它一次。改文件夹名只要改这里一行。
+   The module ids (I / II / III) and the folder names on disk (1 / 2 / 3) are two different
+   things: a module announces itself in Roman numerals (MODULE_ID) while the folders are
+   plain numbers. This table is the mapping, used only when building the src. Renaming a
+   folder means changing one line here. */
+const DIRS = { I: '1', II: '2', III: '3' };
+
+fI.src   = DIRS.I   + '/index.html' + QS;
+fII.src  = DIRS.II  + '/index.html' + QS;
+fIII.src = DIRS.III + '/index.html' + QS;
+
+const FRAMES = { I: fI, II: fII, III: fIII };
+let current = 'I';
+let pending = null;        // 正在等旧板块回话的目标 / target awaiting the outgoing module's reply
+
+function show(id) {
+  for (const k in FRAMES) FRAMES[k].classList.toggle('on', k === id);
+  current = id;
+}
+
+function post(id, msg) {
+  const f = FRAMES[id];
+  if (f && f.contentWindow) f.contentWindow.postMessage(msg, '*');
+}
+
+/* 切换分两步，因为向旧板块要参数是**异步**的。
+   第一版把请求和交接写在同一个函数里，于是交接用的永远是上一次的回音：
+   第一次切换交出去的是空，第二次交出去的是第一次那个板块的值。
+   现在改成：请求发出去，等回音到了再真正切；两百五十毫秒没回音就照切不误，
+   免得某个板块没准备好就把整个切换卡死。
+
+   Switching happens in two steps because asking the outgoing module for its parameters is
+   *asynchronous*. The first version put the request and the handover in one function, so
+   the handover always used the previous reply: the first switch handed over nothing and
+   the second handed over the first module's values. Now the request goes out and the
+   switch happens when the reply lands, with a 250 ms fallback so a module that is not
+   ready cannot wedge the whole thing. */
+function switchTo(id) {
+  if (id === current || !FRAMES[id] || pending) return;
+  pending = id;
+  post(current, { type: 'sys:getShared' });
+  setTimeout(function () { if (pending === id) commit(id, null); }, 250);
+}
+
+function commit(id, vals) {
+  if (pending !== id) return;
+  pending = null;
+  post(current, { type: 'sys:pause' });
+  show(id);
+  post(id, { type: 'sys:resume' });
+  if (vals) post(id, { type: 'sys:setShared', vals: vals });
+}
+
+window.addEventListener('message', function (e) {
+  const m = e.data;
+  if (!m || typeof m.type !== 'string') return;
+
+  if (m.type === 'sys:switch') switchTo(m.to);
+  if (m.type === 'sys:fullscreen') goFullscreen();
+  if (m.type === 'sys:shared' && m.id === current && pending) commit(pending, m.vals);
+  if (m.type === 'sys:ready') {
+    // 只有当前板块跑，其余暂停 —— 渲染是唯一的瓶颈，三个一起跑没有意义
+    // Only the active module loops; rendering is the sole bottleneck and running three at
+    // once buys nothing
+    post(m.id, m.id === current ? { type: 'sys:resume' } : { type: 'sys:pause' });
+    if (m.id === current) {
+      const boot = document.getElementById('boot');
+      setTimeout(function () { boot.classList.add('gone'); }, 400);
+    }
+  }
+});
+
+show('I');
+
+/* 全屏由外壳来做，不由板块自己做。
+   板块跑在 iframe 里，如果每一格自己去 requestFullscreen，那么全屏的是那一格 —— 按一下
+   1/2/3 换板块，全屏立刻掉出来。所以按 Q 时板块只朝这里喊一声（sys:fullscreen），
+   由外壳对整份文档提出请求，换板块就只是换 iframe，全屏不受影响。
+
+   requestFullscreen 要一次用户手势。手势会沿 frame 链传给父窗口，所以板块那边的按键
+   足够让这里的请求通过；键盘焦点若在外壳自己身上，下面的 keydown 也直接接住。
+
+   Fullscreen belongs to the shell. Each module runs in an iframe, and a module fullscreening
+   itself would drop out of fullscreen the instant someone pressed 1, 2 or 3. Q therefore only
+   sends word (sys:fullscreen) and the shell makes the request on the whole document, so
+   switching modules is just switching iframes. The user gesture propagates up the frame chain,
+   which is what makes the request from a child's keypress legal. */
+function goFullscreen() {
+  const d = document;
+  const on = d.fullscreenElement || d.webkitFullscreenElement;
+  try {
+    if (on) {
+      const ex = d.exitFullscreen || d.webkitExitFullscreen;
+      if (ex) ex.call(d);
+    } else {
+      const e = d.documentElement;
+      const req = e.requestFullscreen || e.webkitRequestFullscreen;
+      if (req) { const p = req.call(e); if (p && p.catch) p.catch(function () {}); }
+    }
+  } catch (err) {}
+}
+
+// 数字键直接切板块，方便展陈时用遥控器 / number keys switch modules, handy with a clicker
+window.addEventListener('keydown', function (e) {
+  if (e.key === '1') switchTo('I');
+  if (e.key === '2') switchTo('II');
+  if (e.key === '3') switchTo('III');
+  if (e.key === 'q' || e.key === 'Q') goFullscreen();
+});
+</script>
+</body>
+</html>
